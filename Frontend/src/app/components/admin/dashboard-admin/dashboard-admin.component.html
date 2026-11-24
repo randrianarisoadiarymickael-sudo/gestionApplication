@@ -1,0 +1,514 @@
+<div class="admin-container">
+
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="assets/logo_cnaps.png" alt="CNaPS" class="navbar-logo" />
+      <div class="navbar-info">
+        <span class="navbar-title">CNaPS — Gestion des Applications</span>
+        <span class="navbar-subtitle">Panneau Administrateur</span>
+      </div>
+    </div>
+    <div class="navbar-right">
+      <div class="user-info">
+        <div class="user-avatar">
+          {{ user?.nom?.charAt(0) }}{{ user?.prenom?.charAt(0) }}
+        </div>
+        <div class="user-details">
+          <span class="user-name">{{ user?.nom }} {{ user?.prenom }}</span>
+          <span class="user-role">{{ user?.role }}</span>
+        </div>
+      </div>
+      <button class="btn-deconnexion" (click)="deconnecter()">
+        <span class="material-icons">logout</span>
+        Déconnexion
+      </button>
+    </div>
+  </nav>
+
+  <div class="admin-content">
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>
+          <span class="material-icons">dashboard</span>
+          Tableau de bord
+        </h1>
+        <p>Bienvenue, {{ user?.nom }} {{ user?.prenom }} — Voici l'état actuel des incidents</p>
+      </div>
+      <button class="btn-rafraichir" (click)="chargerTickets()">
+        <span class="material-icons">refresh</span>
+        Rafraîchir
+      </button>
+    </div>
+
+    <!-- BILANS -->
+    <div class="bilans-group">
+      <div class="bilan-card bilan-total">
+        <div class="bilan-top">
+          <span class="bilan-label">Total des tickets</span>
+          <div class="bilan-icon"><span class="material-icons">confirmation_number</span></div>
+        </div>
+        <div class="bilan-number">{{ getNombreParStatut('TOUS') }}</div>
+        <div class="bilan-footer">
+          <span class="material-icons">trending_up</span>
+          Tous les tickets enregistrés
+        </div>
+      </div>
+      <div class="bilan-card bilan-nouveau">
+        <div class="bilan-top">
+          <span class="bilan-label">Nouveaux tickets</span>
+          <div class="bilan-icon"><span class="material-icons">fiber_new</span></div>
+        </div>
+        <div class="bilan-number">{{ getNombreParStatut('NOUVEAU') }}</div>
+        <div class="bilan-footer">
+          <span class="material-icons">arrow_forward</span>
+          En attente de traitement
+        </div>
+      </div>
+      <div class="bilan-card bilan-encours">
+        <div class="bilan-top">
+          <span class="bilan-label">En cours</span>
+          <div class="bilan-icon"><span class="material-icons">settings</span></div>
+        </div>
+        <div class="bilan-number">{{ getNombreParStatut('EN_COURS') }}</div>
+        <div class="bilan-footer">
+          <span class="material-icons">arrow_forward</span>
+          En cours de traitement
+        </div>
+      </div>
+      <div class="bilan-card bilan-entest">
+        <div class="bilan-top">
+          <span class="bilan-label">En test</span>
+          <div class="bilan-icon"><span class="material-icons">science</span></div>
+        </div>
+        <div class="bilan-number">{{ getNombreParStatut('EN_TEST') }}</div>
+        <div class="bilan-footer">
+          <span class="material-icons">arrow_forward</span>
+          En phase de test
+        </div>
+      </div>
+      <div class="bilan-card bilan-resolu">
+        <div class="bilan-top">
+          <span class="bilan-label">Résolus</span>
+          <div class="bilan-icon"><span class="material-icons">check_circle</span></div>
+        </div>
+        <div class="bilan-number">{{ getNombreParStatut('RESOLU') }}</div>
+        <div class="bilan-footer">
+          <span class="material-icons">arrow_forward</span>
+          Problèmes résolus
+        </div>
+      </div>
+    </div>
+
+    <!-- RECHERCHE ET FILTRES -->
+    <div class="search-filter-bar">
+      <div class="search-box">
+        <span class="material-icons search-icon">search</span>
+        <input
+          type="text"
+          [(ngModel)]="recherche"
+          (input)="onRecherche()"
+          placeholder="Rechercher par titre, créateur ou application..."
+          class="search-input"
+        />
+        <span class="material-icons clear-icon"
+          *ngIf="recherche"
+          (click)="recherche=''; onRecherche()">close</span>
+      </div>
+      <div class="filtres">
+        <button
+          *ngFor="let statut of statuts"
+          class="filtre-btn"
+          [class.active]="filtreStatut === statut"
+          (click)="filtrer(statut)">
+          {{ statut }}
+          <span class="filtre-count">{{ getNombreParStatut(statut) }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- CHARGEMENT -->
+    <div class="chargement" *ngIf="chargement">
+      <div class="spinner"></div>
+      <p>Chargement des tickets en cours...</p>
+    </div>
+
+    <!-- ERREUR -->
+    <div class="erreur" *ngIf="erreur">
+      <span class="material-icons">error_outline</span>
+      {{ erreur }}
+    </div>
+
+    <!-- TABLEAU -->
+    <div class="table-container" *ngIf="!chargement">
+      <div class="table-header">
+        <div class="table-header-left">
+          <span class="material-icons">list_alt</span>
+          <span>{{ totalElements }} ticket(s) au total</span>
+        </div>
+      </div>
+      <table class="tickets-table">
+        <thead>
+          <tr>
+            <th><span class="material-icons th-icon">tag</span> N°</th>
+            <th><span class="material-icons th-icon">description</span> Titre</th>
+            <th><span class="material-icons th-icon">apps</span> Application</th>
+            <th><span class="material-icons th-icon">person</span> Créateur</th>
+            <th><span class="material-icons th-icon">flash_on</span> Priorité</th>
+            <th><span class="material-icons th-icon">flag</span> Statut</th>
+            <th><span class="material-icons th-icon">engineering</span> Développeur</th>
+            <th><span class="material-icons th-icon">calendar_today</span> Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ticket of ticketsFiltres"
+            class="ticket-row"
+            (click)="voirTicket(ticket.idTicket)"
+            title="Cliquer pour voir les détails">
+            <td class="ticket-id">#{{ ticket.idTicket }}</td>
+            <td class="ticket-titre">{{ ticket.titre }}</td>
+            <td class="ticket-app">{{ ticket.application?.nomApplication }}</td>
+            <td>
+              <div class="createur-info">
+                <div class="createur-avatar">{{ ticket.createur?.nom?.charAt(0) }}</div>
+                <span>{{ ticket.createur?.nom }} {{ ticket.createur?.prenom }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="getPrioriteClass(ticket.priorite)">
+                {{ ticket.priorite }}
+              </span>
+            </td>
+            <td>
+              <span class="statut" [ngClass]="getStatutClass(ticket.statut)">
+                {{ ticket.statut }}
+              </span>
+            </td>
+            <td>
+              <div class="dev-info" *ngIf="getDevTicket(ticket.idTicket) as dev; else aucunDev">
+                <div class="dev-avatar">{{ dev.charAt(0) }}</div>
+                <span class="dev-nom">{{ dev }}</span>
+              </div>
+              <ng-template #aucunDev>
+                <span class="dev-non-assigne">—</span>
+              </ng-template>
+            </td>
+            <td class="ticket-date">{{ ticket.dateCreation | date:'dd/MM/yyyy' }}</td>
+          </tr>
+          <tr *ngIf="ticketsFiltres.length === 0">
+            <td colspan="8" class="no-data">
+              <div class="no-data-content">
+                <span class="material-icons no-data-icon">inbox</span>
+                <p>Aucun ticket trouvé</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- PAGINATION -->
+      <div class="pagination-bar">
+        <div class="pagination-info">
+          Page {{ pageActuelle + 1 }} sur {{ totalPages }}
+          — {{ totalElements }} ticket(s) au total
+        </div>
+        <div class="pagination-controls">
+          <button class="page-btn" (click)="allerPage(0)" [disabled]="pageActuelle === 0">
+            <span class="material-icons">first_page</span>
+          </button>
+          <button class="page-btn" (click)="pagePrecedente()" [disabled]="pageActuelle === 0">
+            <span class="material-icons">chevron_left</span>
+          </button>
+          <button
+            *ngFor="let p of getPages()"
+            class="page-btn page-number"
+            [class.active]="p === pageActuelle"
+            (click)="allerPage(p)">
+            {{ p + 1 }}
+          </button>
+          <button class="page-btn" (click)="pageSuivante()" [disabled]="pageActuelle === totalPages - 1">
+            <span class="material-icons">chevron_right</span>
+          </button>
+          <button class="page-btn" (click)="allerPage(totalPages - 1)" [disabled]="pageActuelle === totalPages - 1">
+            <span class="material-icons">last_page</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- MODAL DETAIL TICKET                                          -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="afficherModal" (click)="fermerModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <span class="modal-id">Ticket #{{ ticketSelectionne?.idTicket }}</span>
+        <h2>{{ ticketSelectionne?.titre }}</h2>
+      </div>
+      <button class="modal-close" (click)="fermerModal()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- CARTE DECLARANT -->
+      <div class="declarant-card">
+        <div class="declarant-avatar-large">
+          {{ ticketSelectionne?.createur?.nom?.charAt(0) }}{{ ticketSelectionne?.createur?.prenom?.charAt(0) }}
+        </div>
+        <div class="declarant-infos">
+          <div class="declarant-nom">{{ ticketSelectionne?.createur?.nom }} {{ ticketSelectionne?.createur?.prenom }}</div>
+          <div class="declarant-matricule">{{ ticketSelectionne?.createur?.matricule }}</div>
+          <div class="declarant-dept">
+            <span class="material-icons">business</span>
+            {{ ticketSelectionne?.createur?.departement?.nomDepartement || 'Non défini' }}
+          </div>
+        </div>
+        <div class="declarant-badges">
+          <span class="badge" [ngClass]="getPrioriteClass(ticketSelectionne?.priorite)">
+            {{ ticketSelectionne?.priorite }}
+          </span>
+          <span class="statut" [ngClass]="getStatutClass(ticketSelectionne?.statut)">
+            {{ ticketSelectionne?.statut }}
+          </span>
+        </div>
+      </div>
+
+      <!-- APPLICATION AVEC RENOMMAGE -->
+      <div class="modal-section">
+        <div class="modal-section-titre">
+          <span class="material-icons">apps</span>
+          Application concernée
+        </div>
+        <div class="ticket-info-item">
+          <span class="material-icons">apps</span>
+          <div style="width:100%">
+            <div class="info-label">Application</div>
+            <div class="info-value-row">
+              <span class="info-value">{{ ticketSelectionne?.application?.nomApplication }}</span>
+              <button class="btn-identifier-app"
+                *ngIf="!afficherRenommageApp"
+                (click)="ouvrirRenommageApp()"
+                title="Identifier / renommer cette application">
+                <span class="material-icons">edit</span>
+                Identifier
+              </button>
+            </div>
+            <div class="renommage-inline" *ngIf="afficherRenommageApp">
+              <input
+                type="text"
+                class="renommage-input"
+                [(ngModel)]="nouveauNomApp"
+                placeholder="Nouveau nom de l'application"
+                maxlength="100"
+              />
+              <div class="renommage-actions">
+                <button class="btn-renommage-confirmer"
+                  (click)="confirmerRenommageApp()"
+                  [disabled]="renommageEnCours">
+                  <span class="material-icons">check</span>
+                  {{ renommageEnCours ? 'En cours...' : 'Confirmer' }}
+                </button>
+                <button class="btn-renommage-annuler"
+                  (click)="fermerRenommageApp()"
+                  [disabled]="renommageEnCours">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+              <div class="renommage-succes" *ngIf="renommageSucces">
+                <span class="material-icons">check_circle</span> {{ renommageSucces }}
+              </div>
+              <div class="renommage-erreur" *ngIf="renommageErreur">
+                <span class="material-icons">error</span> {{ renommageErreur }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DATE DECLARATION -->
+      <div class="modal-section">
+        <div class="modal-section-titre">
+          <span class="material-icons">calendar_today</span>
+          Date de déclaration
+        </div>
+        <div class="ticket-info-item">
+          <span class="material-icons">calendar_today</span>
+          <div>
+            <div class="info-label">Date</div>
+            <div class="info-value">{{ ticketSelectionne?.dateCreation | date:'dd/MM/yyyy' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DESCRIPTION -->
+      <div class="modal-section">
+        <div class="modal-section-titre">
+          <span class="material-icons">description</span>
+          Description de l'incident
+        </div>
+        <p class="modal-description">{{ ticketSelectionne?.description }}</p>
+      </div>
+
+      <!-- CAPTURE D'ÉCRAN -->
+      <div class="modal-section" *ngIf="ticketSelectionne?.imagePath">
+        <div class="modal-section-titre">
+          <span class="material-icons">image</span>
+          Capture d'écran
+        </div>
+        <div class="capture-container">
+          <img
+            [src]="getImageUrl(ticketSelectionne?.imagePath)"
+            alt="Capture d'écran"
+            class="capture-img"
+            (click)="ouvrirImagePleinEcran(ticketSelectionne?.imagePath)"
+          />
+          <p class="capture-hint">
+            <span class="material-icons">zoom_in</span>
+            Cliquer pour agrandir
+          </p>
+        </div>
+      </div>
+
+      <!-- CHANGER STATUT -->
+      <div class="modal-section">
+        <div class="modal-section-titre">
+          <span class="material-icons">swap_horiz</span>
+          Changer le statut
+        </div>
+        <div class="modal-statuts">
+          <button
+            *ngFor="let statut of statuts"
+            class="statut-btn"
+            [class.active]="ticketSelectionne?.statut === statut"
+            (click)="changerStatutModal(statut)">
+            {{ statut }}
+          </button>
+        </div>
+      </div>
+
+      <!-- DEVELOPPEURS ASSIGNES -->
+      <div class="modal-section">
+        <div class="modal-section-titre">
+          <span class="material-icons">assignment_ind</span>
+          Développeur(s) assigné(s)
+        </div>
+        <div *ngIf="tachesTicket.length === 0" class="aucune-tache">
+          <span class="material-icons">person_off</span>
+          <span>Aucun développeur assigné pour le moment</span>
+        </div>
+        <div class="tache-badge-list" *ngIf="tachesTicket.length > 0">
+          <div class="tache-badge-item" *ngFor="let t of tachesTicket">
+            <div class="tache-badge-left">
+              <div class="tache-badge-avatar">{{ t.developpeur?.nom?.charAt(0) }}</div>
+              <div class="tache-badge-info">
+                <span class="tache-badge-titre">{{ t.developpeur?.nom }} {{ t.developpeur?.prenom }}</span>
+                <span class="tache-badge-dev">{{ t.developpeur?.matricule }}</span>
+              </div>
+            </div>
+            <div class="tache-badge-right">
+              <span class="statut" [ngClass]="getTacheStatutClass(t.statut)">{{ t.statut }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-historique" (click)="voirHistorique(ticketSelectionne?.idTicket)">
+        <span class="material-icons">history</span>
+        Historique
+      </button>
+      <button class="btn-assigner" (click)="ouvrirModalTache()">
+        <span class="material-icons">person_add</span>
+        Assigner
+      </button>
+      <button class="btn-fermer" (click)="fermerModal()">Fermer</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- MODAL ASSIGNATION DEVELOPPEUR                                -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="afficherModalTache" (click)="fermerModalTache()">
+  <div class="modal-box modal-tache" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <span class="modal-id">Ticket #{{ ticketSelectionne?.idTicket }}</span>
+        <h2>Assigner un développeur</h2>
+      </div>
+      <button class="modal-close" (click)="fermerModalTache()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="tache-inline-form">
+        <div class="tache-inline-field full">
+          <label>Développeur <span class="required">*</span></label>
+          <select [(ngModel)]="nouvelleTache.developpeur.idUtilisateur"
+            class="form-control-tache">
+            <option value="">-- Choisir un développeur --</option>
+            <option *ngFor="let dev of developpeurs" [value]="dev.idUtilisateur">
+              {{ dev.nom }} {{ dev.prenom }} ({{ dev.matricule }})
+            </option>
+          </select>
+        </div>
+        <div class="tache-inline-actions">
+          <button class="btn-assigner-confirm" (click)="assignerTacheDepuisModal()">
+            <span class="material-icons">person_add</span>
+            Assigner
+          </button>
+        </div>
+      </div>
+
+      <div class="taches-existantes-inline" *ngIf="tachesTicket.length > 0">
+        <div class="taches-existantes-titre">
+          Historique des assignations ({{ tachesTicket.length }})
+        </div>
+        <div class="tache-badge-list">
+          <div class="tache-badge-item" *ngFor="let t of tachesTicket">
+            <div class="tache-badge-left">
+              <div class="tache-badge-avatar">{{ t.developpeur?.nom?.charAt(0) }}</div>
+              <div class="tache-badge-info">
+                <span class="tache-badge-titre">{{ t.developpeur?.nom }} {{ t.developpeur?.prenom }}</span>
+                <span class="tache-badge-dev">{{ t.developpeur?.matricule }}</span>
+              </div>
+            </div>
+            <div class="tache-badge-right">
+              <span class="statut" [ngClass]="getTacheStatutClass(t.statut)">{{ t.statut }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="tachesTicket.length === 0" class="aucune-tache">
+        <span class="material-icons">person_off</span>
+        <span>Aucun développeur assigné pour le moment</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-fermer" (click)="fermerModalTache()">Fermer</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- VISIONNEUSE PLEIN ÉCRAN -->
+<div class="image-overlay" *ngIf="imageEnPleinEcran" (click)="fermerImagePleinEcran()">
+  <img [src]="imageEnPleinEcran" alt="Capture plein écran" />
+  <button class="btn-fermer-image" (click)="$event.stopPropagation(); fermerImagePleinEcran()">
+    <span class="material-icons">close</span>
+  </button>
+</div>

@@ -1,0 +1,744 @@
+<div class="dev-layout" [class.sidebar-fermee]="!sidebarOuverte">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" [class.sidebar-collapsed]="!sidebarOuverte">
+
+    <div class="sidebar-top">
+      <div class="sidebar-brand" *ngIf="sidebarOuverte">
+        <img src="assets/logo_cnaps.png" alt="CNaPS" class="sidebar-logo" />
+        <div class="sidebar-brand-text">
+          <span class="sidebar-brand-title">CNaPS</span>
+          <span class="sidebar-brand-sub">Espace Développeur</span>
+        </div>
+      </div>
+      <button class="sidebar-toggle" (click)="toggleSidebar()" [title]="sidebarOuverte ? 'Réduire' : 'Agrandir'">
+        <span class="material-icons">{{ sidebarOuverte ? 'chevron_left' : 'chevron_right' }}</span>
+      </button>
+    </div>
+
+    <div class="sidebar-user" [class.sidebar-user-collapsed]="!sidebarOuverte">
+      <div class="sidebar-avatar">
+        {{ user?.nom?.charAt(0) }}{{ user?.prenom?.charAt(0) }}
+      </div>
+      <div class="sidebar-user-info" *ngIf="sidebarOuverte">
+        <span class="sidebar-user-name">{{ user?.nom }} {{ user?.prenom }}</span>
+        <span class="sidebar-user-role">
+          <span class="material-icons" style="font-size:11px">circle</span>
+          {{ user?.role }}
+        </span>
+      </div>
+    </div>
+
+    <div class="sidebar-sep"></div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label" *ngIf="sidebarOuverte">NAVIGATION</div>
+
+      <button class="sidebar-link"
+        [class.sidebar-link-active]="ongletActif === 'mes-taches'"
+        (click)="changerOnglet('mes-taches')"
+        [title]="!sidebarOuverte ? 'Mes tâches' : ''">
+        <span class="material-icons sidebar-link-icon">dashboard</span>
+        <span class="sidebar-link-label" *ngIf="sidebarOuverte">Dashboard</span>
+        <span class="sidebar-badge" *ngIf="sidebarOuverte && totalElements > 0">{{ totalElements }}</span>
+        <span class="sidebar-badge-dot" *ngIf="!sidebarOuverte && totalElements > 0"></span>
+      </button>
+
+      <button class="sidebar-link"
+        [class.sidebar-link-active]="ongletActif === 'non-resolues'"
+        [class.sidebar-link-alert]="totalElementsReassignee > 0"
+        (click)="changerOnglet('non-resolues')"
+        [title]="!sidebarOuverte ? 'Tâches non résolues' : ''">
+        <span class="material-icons sidebar-link-icon">history_toggle_off</span>
+        <span class="sidebar-link-label" *ngIf="sidebarOuverte">Tâches non résolues</span>
+        <span class="sidebar-badge sidebar-badge-alert"
+          *ngIf="sidebarOuverte && totalElementsReassignee > 0">
+          {{ totalElementsReassignee }}
+        </span>
+        <span class="sidebar-badge-dot sidebar-badge-dot-alert"
+          *ngIf="!sidebarOuverte && totalElementsReassignee > 0"></span>
+      </button>
+    </nav>
+
+    <div class="sidebar-sep"></div>
+
+    <div class="sidebar-bottom">
+      <button class="sidebar-logout" (click)="deconnecter()"
+        [title]="!sidebarOuverte ? 'Déconnexion' : ''">
+        <span class="material-icons sidebar-link-icon">logout</span>
+        <span class="sidebar-link-label" *ngIf="sidebarOuverte">Déconnexion</span>
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ZONE PRINCIPALE -->
+  <div class="dev-main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">
+          <span class="material-icons">
+            {{ ongletActif === 'mes-taches' ? 'dashboard' : 'history_toggle_off' }}
+          </span>
+          {{ ongletActif === 'mes-taches' ? 'Tableau de bord' : 'Tâches non résolues' }}
+        </h1>
+        <span class="topbar-sub">
+          {{ ongletActif === 'mes-taches'
+            ? 'Voici vos tâches assignées'
+            : 'Tâches réassignées — lecture seule' }}
+        </span>
+      </div>
+      <button class="btn-rafraichir" (click)="chargerTaches(); chargerTachesReassignees()">
+        <span class="material-icons">refresh</span>
+        Rafraîchir
+      </button>
+    </header>
+
+    <div class="dev-content">
+
+      <!-- BILANS CLIQUABLES -->
+      <div class="bilans-group">
+
+        <div class="bilan-card bilan-total"
+          [class.bilan-actif]="filtreStatut === 'TOUS'"
+          (click)="filtrer('TOUS')"
+          title="Afficher toutes les tâches">
+          <div class="bilan-top">
+            <span class="bilan-label">Total des tâches</span>
+            <div class="bilan-icon"><span class="material-icons">assignment</span></div>
+          </div>
+          <div class="bilan-number">{{ totalElements }}</div>
+          <div class="bilan-footer">
+            <span class="material-icons">trending_up</span>
+            Toutes les tâches assignées
+          </div>
+        </div>
+
+        <div class="bilan-card bilan-attente"
+          [class.bilan-actif]="filtreStatut === 'EN_ATTENTE'"
+          (click)="filtrer('EN_ATTENTE')"
+          title="Filtrer : En attente">
+          <div class="bilan-top">
+            <span class="bilan-label">En attente</span>
+            <div class="bilan-icon"><span class="material-icons">hourglass_empty</span></div>
+          </div>
+          <div class="bilan-number">{{ getNombreParStatut('EN_ATTENTE') }}</div>
+          <div class="bilan-footer">
+            <span class="material-icons">arrow_forward</span>
+            À commencer
+          </div>
+        </div>
+
+        <div class="bilan-card bilan-encours"
+          [class.bilan-actif]="filtreStatut === 'EN_COURS'"
+          (click)="filtrer('EN_COURS')"
+          title="Filtrer : En cours">
+          <div class="bilan-top">
+            <span class="bilan-label">En cours</span>
+            <div class="bilan-icon"><span class="material-icons">settings</span></div>
+          </div>
+          <div class="bilan-number">{{ getNombreParStatut('EN_COURS') }}</div>
+          <div class="bilan-footer">
+            <span class="material-icons">arrow_forward</span>
+            En traitement
+          </div>
+        </div>
+
+        <div class="bilan-card bilan-entest"
+          [class.bilan-actif]="filtreStatut === 'EN_TEST'"
+          (click)="filtrer('EN_TEST')"
+          title="Filtrer : En test">
+          <div class="bilan-top">
+            <span class="bilan-label">En test</span>
+            <div class="bilan-icon"><span class="material-icons">science</span></div>
+          </div>
+          <div class="bilan-number">{{ getNombreParStatut('EN_TEST') }}</div>
+          <div class="bilan-footer">
+            <span class="material-icons">arrow_forward</span>
+            En phase de test
+          </div>
+        </div>
+
+        <div class="bilan-card bilan-terminee"
+          [class.bilan-actif]="filtreStatut === 'TERMINEE'"
+          (click)="filtrer('TERMINEE')"
+          title="Filtrer : Terminées">
+          <div class="bilan-top">
+            <span class="bilan-label">Terminées</span>
+            <div class="bilan-icon"><span class="material-icons">check_circle</span></div>
+          </div>
+          <div class="bilan-number">{{ getNombreParStatut('TERMINEE') }}</div>
+          <div class="bilan-footer">
+            <span class="material-icons">arrow_forward</span>
+            Tâches complétées
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- VUE : MES TÂCHES                                     -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <div *ngIf="ongletActif === 'mes-taches'">
+
+        <!-- BARRE DE RECHERCHE -->
+        <div class="search-filter-bar">
+          <div class="search-box">
+            <span class="material-icons search-icon">search</span>
+            <input
+              type="text"
+              [(ngModel)]="recherche"
+              (input)="onRecherche()"
+              placeholder="Rechercher par titre ou application..."
+              class="search-input"
+            />
+            <span class="material-icons clear-icon"
+              *ngIf="recherche"
+              (click)="recherche=''; onRecherche()">close</span>
+          </div>
+        </div>
+
+        <!-- INDICATEUR FILTRE ACTIF -->
+        <div class="filtre-actif-info" *ngIf="filtreStatut !== 'TOUS'">
+          <span class="material-icons">filter_list</span>
+          Filtre actif : <strong>{{ getStatutLabel(filtreStatut) }}</strong>
+          <button class="btn-effacer-filtre" (click)="filtrer('TOUS')">
+            <span class="material-icons">close</span>
+            Tout afficher
+          </button>
+        </div>
+
+        <div class="chargement" *ngIf="chargement">
+          <div class="spinner"></div>
+          <p>Chargement des tâches en cours...</p>
+        </div>
+
+        <div class="erreur" *ngIf="erreur">
+          <span class="material-icons">error_outline</span>
+          {{ erreur }}
+        </div>
+
+        <div class="table-container" *ngIf="!chargement">
+          <div class="table-header">
+            <div class="table-header-left">
+              <span class="material-icons">list_alt</span>
+              <span>{{ tachesFiltrees.length }} tâche(s)
+                {{ filtreStatut !== 'TOUS' ? '— ' + getStatutLabel(filtreStatut) : 'au total' }}
+              </span>
+            </div>
+          </div>
+          <table class="taches-table">
+            <thead>
+              <tr>
+                <th><span class="material-icons th-icon">tag</span> N°</th>
+                <th><span class="material-icons th-icon">description</span> Titre</th>
+                <th><span class="material-icons th-icon">confirmation_number</span> Ticket</th>
+                <th><span class="material-icons th-icon">apps</span> Application</th>
+                <th><span class="material-icons th-icon">flash_on</span> Priorité</th>
+                <th><span class="material-icons th-icon">flag</span> Statut</th>
+                <th><span class="material-icons th-icon">calendar_today</span> Date</th>
+                <th><span class="material-icons th-icon">settings</span> Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tache of tachesFiltrees"
+                class="tache-row"
+                (click)="voirTache(tache, false)">
+                <td class="tache-id">#{{ tache.idTache }}</td>
+                <td class="tache-titre">{{ tache.titre }}</td>
+                <td>
+                  <div class="ticket-ref-info">
+                    <span class="ticket-ref">#{{ tache.ticket?.idTicket }}</span>
+                    <span class="ticket-ref-titre">{{ tache.ticket?.titre }}</span>
+                  </div>
+                </td>
+                <td>{{ tache.ticket?.application?.nomApplication }}</td>
+                <td>
+                  <span class="badge" [ngClass]="getPrioriteClass(tache.priorite)">{{ tache.priorite }}</span>
+                </td>
+                <td>
+                  <span class="statut" [ngClass]="getStatutClass(tache.statut)">{{ getStatutLabel(tache.statut) }}</span>
+                </td>
+                <td class="tache-date">{{ tache.dateCreation | date:'dd/MM/yyyy' }}</td>
+                <td>
+                  <div class="actions-group" (click)="$event.stopPropagation()">
+                    <button class="btn-voir" (click)="voirTache(tache, false)" title="Voir">
+                      <span class="material-icons">visibility</span>
+                    </button>
+                    <button class="btn-commencer" *ngIf="tache.statut === 'EN_ATTENTE'"
+                      (click)="commencerTache(tache.idTache)" title="Commencer">
+                      <span class="material-icons">play_arrow</span>
+                    </button>
+                    <button class="btn-entest" *ngIf="tache.statut === 'EN_COURS'"
+                      (click)="mettreEnTest(tache.idTache)" title="En test">
+                      <span class="material-icons">science</span>
+                    </button>
+                    <button class="btn-terminer" *ngIf="tache.statut === 'EN_TEST'"
+                      (click)="terminerTache(tache.idTache)" title="Terminer">
+                      <span class="material-icons">check</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="tachesFiltrees.length === 0">
+                <td colspan="8" class="no-data">
+                  <div class="no-data-content">
+                    <span class="material-icons no-data-icon">inbox</span>
+                    <p>Aucune tâche {{ filtreStatut !== 'TOUS' ? 'avec le statut "' + getStatutLabel(filtreStatut) + '"' : 'trouvée' }}</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination-bar">
+            <div class="pagination-info">
+              Page {{ pageActuelle + 1 }} sur {{ totalPages }} — {{ totalElements }} tâche(s)
+            </div>
+            <div class="pagination-controls">
+              <button class="page-btn" (click)="allerPage(0)" [disabled]="pageActuelle === 0">
+                <span class="material-icons">first_page</span>
+              </button>
+              <button class="page-btn" (click)="pagePrecedente()" [disabled]="pageActuelle === 0">
+                <span class="material-icons">chevron_left</span>
+              </button>
+              <button *ngFor="let p of getPages()"
+                class="page-btn page-number"
+                [class.active]="p === pageActuelle"
+                (click)="allerPage(p)">
+                {{ p + 1 }}
+              </button>
+              <button class="page-btn" (click)="pageSuivante()" [disabled]="pageActuelle === totalPages - 1">
+                <span class="material-icons">chevron_right</span>
+              </button>
+              <button class="page-btn" (click)="allerPage(totalPages - 1)" [disabled]="pageActuelle === totalPages - 1">
+                <span class="material-icons">last_page</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- VUE : TÂCHES NON RÉSOLUES                            -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <div *ngIf="ongletActif === 'non-resolues'">
+
+        <div class="chargement" *ngIf="chargementReassignee">
+          <div class="spinner"></div>
+          <p>Chargement...</p>
+        </div>
+
+        <div class="non-resolues-vide" *ngIf="!chargementReassignee && totalElementsReassignee === 0">
+          <span class="material-icons">check_circle_outline</span>
+          <p>Aucune tâche non résolue.</p>
+        </div>
+
+        <div class="table-container" *ngIf="!chargementReassignee && totalElementsReassignee > 0">
+          <div class="table-header non-resolues-header">
+            <div class="table-header-left">
+              <span class="material-icons">history_toggle_off</span>
+              <span>{{ totalElementsReassignee }} tâche(s) non résolue(s) — lecture seule</span>
+            </div>
+            <div class="non-resolues-info">
+              <span class="material-icons">lock</span>
+              Aucune action possible
+            </div>
+          </div>
+          <table class="taches-table">
+            <thead>
+              <tr>
+                <th><span class="material-icons th-icon">tag</span> N°</th>
+                <th><span class="material-icons th-icon">description</span> Titre</th>
+                <th><span class="material-icons th-icon">confirmation_number</span> Ticket</th>
+                <th><span class="material-icons th-icon">apps</span> Application</th>
+                <th><span class="material-icons th-icon">flash_on</span> Priorité</th>
+                <th><span class="material-icons th-icon">flag</span> Statut</th>
+                <th><span class="material-icons th-icon">person</span> Nouveau dev</th>
+                <th><span class="material-icons th-icon">visibility</span> Détails</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tache of tachesReassignees"
+                class="tache-row tache-reassignee"
+                (click)="voirTache(tache, true)">
+                <td class="tache-id">#{{ tache.idTache }}</td>
+                <td class="tache-titre">
+                  {{ tache.titre }}
+                  <span class="badge-reassignee">Réassignée</span>
+                </td>
+                <td>
+                  <div class="ticket-ref-info">
+                    <span class="ticket-ref">#{{ tache.ticket?.idTicket }}</span>
+                    <span class="ticket-ref-titre">{{ tache.ticket?.titre }}</span>
+                  </div>
+                </td>
+                <td>{{ tache.ticket?.application?.nomApplication }}</td>
+                <td>
+                  <span class="badge" [ngClass]="getPrioriteClass(tache.priorite)">{{ tache.priorite }}</span>
+                </td>
+                <td>
+                  <span class="statut" [ngClass]="getStatutClass(tache.statut)">{{ getStatutLabel(tache.statut) }}</span>
+                </td>
+                <td>
+                  <span class="nouveau-dev">
+                    {{ tache.developpeur?.nom }} {{ tache.developpeur?.prenom }}
+                  </span>
+                </td>
+                <td>
+                  <div class="actions-group" (click)="$event.stopPropagation()">
+                    <button class="btn-voir" (click)="voirTache(tache, true)" title="Voir">
+                      <span class="material-icons">visibility</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination-bar" *ngIf="totalPagesReassignee > 1">
+            <div class="pagination-info">Page {{ pageReassignee + 1 }} sur {{ totalPagesReassignee }}</div>
+            <div class="pagination-controls">
+              <button class="page-btn" (click)="pagePrecedenteReassignee()" [disabled]="pageReassignee === 0">
+                <span class="material-icons">chevron_left</span>
+              </button>
+              <button class="page-btn" (click)="pageSuivanteReassignee()" [disabled]="pageReassignee === totalPagesReassignee - 1">
+                <span class="material-icons">chevron_right</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- MODAL                                                        -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="afficherModal" (click)="fermerModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <span class="modal-id">Tâche #{{ tacheSelectionnee?.idTache }}</span>
+        <h2>{{ tacheSelectionnee?.titre }}</h2>
+        <span class="badge-reassignee-modal" *ngIf="tacheSelectionneeEstReassignee">
+          <span class="material-icons">lock</span>
+          Réassignée — Lecture seule
+        </span>
+      </div>
+      <button class="modal-close" (click)="fermerModal()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- CARTE DECLARANT -->
+      <div class="declarant-card">
+        <div class="declarant-avatar-large">
+          {{ tacheSelectionnee?.ticket?.createur?.nom?.charAt(0) }}{{ tacheSelectionnee?.ticket?.createur?.prenom?.charAt(0) }}
+        </div>
+        <div class="declarant-infos">
+          <div class="declarant-nom">{{ tacheSelectionnee?.ticket?.createur?.nom }} {{ tacheSelectionnee?.ticket?.createur?.prenom }}</div>
+          <div class="declarant-matricule">{{ tacheSelectionnee?.ticket?.createur?.matricule }}</div>
+          <div class="declarant-dept">
+            <span class="material-icons">business</span>
+            {{ tacheSelectionnee?.ticket?.createur?.departement?.nomDepartement || 'Non défini' }}
+          </div>
+        </div>
+        <div class="declarant-badges">
+          <span class="badge" [ngClass]="getPrioriteClass(tacheSelectionnee?.priorite)">{{ tacheSelectionnee?.priorite }}</span>
+          <span class="statut" [ngClass]="getStatutClass(tacheSelectionnee?.statut)">{{ getStatutLabel(tacheSelectionnee?.statut) }}</span>
+        </div>
+      </div>
+
+      <!-- INFOS GRILLE -->
+      <div class="ticket-infos-grille">
+
+        <!-- APPLICATION AVEC RENOMMAGE -->
+        <div class="ticket-info-item">
+          <span class="material-icons">apps</span>
+          <div style="width:100%">
+            <div class="info-label">Application</div>
+            <div class="info-value-row">
+              <span class="info-value">{{ tacheSelectionnee?.ticket?.application?.nomApplication }}</span>
+              <button class="btn-identifier-app"
+                *ngIf="!afficherRenommageApp"
+                (click)="ouvrirRenommageApp()"
+                title="Identifier / renommer cette application">
+                <span class="material-icons">edit</span>
+                Identifier
+              </button>
+            </div>
+            <div class="renommage-inline" *ngIf="afficherRenommageApp">
+              <input
+                type="text"
+                class="renommage-input"
+                [(ngModel)]="nouveauNomApp"
+                placeholder="Nouveau nom de l'application"
+                maxlength="100"
+              />
+              <div class="renommage-actions">
+                <button class="btn-renommage-confirmer"
+                  (click)="confirmerRenommageApp()"
+                  [disabled]="renommageEnCours">
+                  <span class="material-icons">check</span>
+                  {{ renommageEnCours ? 'En cours...' : 'Confirmer' }}
+                </button>
+                <button class="btn-renommage-annuler"
+                  (click)="fermerRenommageApp()"
+                  [disabled]="renommageEnCours">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+              <div class="renommage-succes" *ngIf="renommageSucces">
+                <span class="material-icons">check_circle</span> {{ renommageSucces }}
+              </div>
+              <div class="renommage-erreur" *ngIf="renommageErreur">
+                <span class="material-icons">error</span> {{ renommageErreur }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TICKET CONCERNE -->
+        <div class="ticket-info-item">
+          <span class="material-icons">confirmation_number</span>
+          <div>
+            <div class="info-label">Ticket concerné</div>
+            <div class="info-value">#{{ tacheSelectionnee?.ticket?.idTicket }} — {{ tacheSelectionnee?.ticket?.titre }}</div>
+          </div>
+        </div>
+
+        <!-- REASSIGNEE A -->
+        <div class="ticket-info-item" *ngIf="tacheSelectionneeEstReassignee">
+          <span class="material-icons">person</span>
+          <div>
+            <div class="info-label">Réassignée à</div>
+            <div class="info-value">{{ tacheSelectionnee?.developpeur?.nom }} {{ tacheSelectionnee?.developpeur?.prenom }}</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- DESCRIPTION INCIDENT -->
+      <div class="modal-section">
+        <div class="modal-section-titre">
+          <span class="material-icons">bug_report</span>
+          Description de l'incident
+        </div>
+        <p class="modal-description">{{ tacheSelectionnee?.ticket?.description }}</p>
+      </div>
+
+      <!-- CAPTURE -->
+      <div class="modal-section" *ngIf="tacheSelectionnee?.ticket?.imagePath">
+        <div class="modal-section-titre">
+          <span class="material-icons">image</span>
+          Capture d'écran
+        </div>
+        <div class="capture-container">
+          <img [src]="getImageUrl(tacheSelectionnee?.ticket?.imagePath)"
+            alt="Capture" class="capture-img"
+            (click)="ouvrirImagePleinEcran(tacheSelectionnee?.ticket?.imagePath)" />
+          <p class="capture-hint">
+            <span class="material-icons">zoom_in</span>
+            Cliquer pour agrandir
+          </p>
+        </div>
+      </div>
+
+      <!-- DESCRIPTION TACHE -->
+      <div class="modal-section">
+        <div class="modal-section-titre">
+          <span class="material-icons">description</span>
+          Description de la tâche
+        </div>
+        <p class="modal-description">{{ tacheSelectionnee?.description || 'Aucune description.' }}</p>
+      </div>
+
+      <!-- CHANGER STATUT -->
+      <div class="modal-section" *ngIf="!tacheSelectionneeEstReassignee">
+        <div class="modal-section-titre">
+          <span class="material-icons">swap_horiz</span>
+          Changer le statut
+        </div>
+        <div class="modal-statuts">
+          <button class="statut-btn"
+            [class.active]="tacheSelectionnee?.statut === 'EN_ATTENTE'"
+            [disabled]="tacheSelectionnee?.statut === 'EN_ATTENTE'"
+            (click)="commencerTache(tacheSelectionnee?.idTache)">
+            <span class="material-icons">hourglass_empty</span> En attente
+          </button>
+          <button class="statut-btn"
+            [class.active]="tacheSelectionnee?.statut === 'EN_COURS'"
+            (click)="commencerTache(tacheSelectionnee?.idTache)">
+            <span class="material-icons">play_arrow</span> En cours
+          </button>
+          <button class="statut-btn"
+            [class.active]="tacheSelectionnee?.statut === 'EN_TEST'"
+            (click)="mettreEnTest(tacheSelectionnee?.idTache)">
+            <span class="material-icons">science</span> En test
+          </button>
+          <button class="statut-btn"
+            [class.active]="tacheSelectionnee?.statut === 'TERMINEE'"
+            (click)="terminerTache(tacheSelectionnee?.idTache)">
+            <span class="material-icons">check_circle</span> Terminée
+          </button>
+        </div>
+      </div>
+
+      <!-- RAPPORT -->
+      <div class="modal-section" *ngIf="!tacheSelectionneeEstReassignee">
+        <div class="modal-section-titre">
+          <span class="material-icons">edit_note</span>
+          Mon Rapport
+        </div>
+        <p class="rapport-sous-titre">Documentez votre travail ou la raison du blocage.</p>
+
+        <div class="rapport-historique" *ngIf="chargementHistorique">
+          <div class="rapport-spinner"><div class="spinner-small"></div><span>Chargement...</span></div>
+        </div>
+
+        <div class="rapport-historique" *ngIf="!chargementHistorique && rapportsPrecedents.length > 0">
+          <div class="rapport-historique-titre">
+            <span class="material-icons">history</span>
+            Rapports précédents ({{ rapportsPrecedents.length }})
+          </div>
+          <div class="rapport-item" *ngFor="let r of rapportsPrecedents">
+            <div class="rapport-item-header">
+              <div class="rapport-auteur">
+                <span class="rapport-avatar">{{ r.utilisateurNom?.charAt(0) }}{{ r.utilisateurPrenom?.charAt(0) }}</span>
+                <span class="rapport-nom">{{ r.utilisateurNom }} {{ r.utilisateurPrenom }}</span>
+              </div>
+              <span class="rapport-date">
+                <span class="material-icons">schedule</span>
+                {{ r.dateAction | date:'dd/MM/yyyy à HH:mm' }}
+              </span>
+            </div>
+            <p class="rapport-contenu">{{ r.descriptionAction }}</p>
+          </div>
+        </div>
+
+        <div class="rapport-vide" *ngIf="!chargementHistorique && rapportsPrecedents.length === 0">
+          <span class="material-icons">info</span>
+          Aucun rapport pour l'instant.
+        </div>
+
+        <div class="rapport-saisie">
+          <textarea class="rapport-textarea" rows="4" [(ngModel)]="rapportTexte"
+            [disabled]="rapportEnvoi" maxlength="1000"
+            placeholder="Ex : J'ai vérifié l'API X, le problème vient de la DB...">
+          </textarea>
+          <div class="rapport-actions">
+            <span class="rapport-compteur" [class.rapport-compteur-alerte]="rapportTexte.length > 900">
+              {{ rapportTexte.length }} / 1000
+            </span>
+            <button class="btn-rapport" (click)="soumettreRapport()"
+              [disabled]="!rapportTexte || rapportTexte.trim().length === 0 || rapportEnvoi">
+              <div class="spinner-small" *ngIf="rapportEnvoi"></div>
+              <span class="material-icons" *ngIf="!rapportEnvoi">send</span>
+              {{ rapportEnvoi ? 'Envoi...' : 'Envoyer le rapport' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="rapport-succes" *ngIf="rapportSucces">
+          <span class="material-icons">check_circle</span> Rapport enregistré.
+        </div>
+        <div class="rapport-erreur" *ngIf="rapportErreur">
+          <span class="material-icons">error</span> Erreur lors de l'envoi.
+        </div>
+      </div>
+
+      <!-- HISTORIQUE -->
+      <div class="modal-section">
+        <div class="modal-section-titre">
+          <span class="material-icons">history</span>
+          Historique de la tâche
+        </div>
+        <div *ngIf="chargementHistorique" class="rapport-spinner">
+          <div class="spinner-small"></div><span>Chargement...</span>
+        </div>
+        <div *ngIf="!chargementHistorique && historiquesTache.length === 0" class="rapport-vide">
+          <span class="material-icons">info</span> Aucun historique.
+        </div>
+        <div *ngIf="!chargementHistorique && historiquesTache.length > 0">
+          <div *ngFor="let h of historiquesTache" class="historique-item"
+            [ngClass]="{
+              'historique-item-rapport':     h.typeAction === 'RAPPORT',
+              'historique-item-assignation': h.typeAction === 'ASSIGNATION',
+              'historique-item-statut':      h.typeAction === 'CHANGEMENT_STATUT',
+              'historique-item-terminaison': h.typeAction === 'TERMINAISON'
+            }">
+            <div class="historique-item-header">
+              <div class="historique-item-left">
+                <span class="historique-badge"
+                  [ngClass]="{
+                    'badge-rapport':     h.typeAction === 'RAPPORT',
+                    'badge-assignation': h.typeAction === 'ASSIGNATION',
+                    'badge-statut':      h.typeAction === 'CHANGEMENT_STATUT',
+                    'badge-terminaison': h.typeAction === 'TERMINAISON'
+                  }">
+                  <span class="material-icons">
+                    {{ h.typeAction === 'RAPPORT' ? 'edit_note' :
+                       h.typeAction === 'ASSIGNATION' ? 'person_add' :
+                       h.typeAction === 'CHANGEMENT_STATUT' ? 'swap_horiz' :
+                       h.typeAction === 'TERMINAISON' ? 'check_circle' : 'history' }}
+                  </span>
+                  {{ h.typeAction }}
+                </span>
+                <span class="historique-auteur" *ngIf="h.utilisateurNom">
+                  {{ h.utilisateurNom }} {{ h.utilisateurPrenom }}
+                </span>
+              </div>
+              <span class="historique-date">{{ h.dateAction | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <p class="historique-description" *ngIf="h.typeAction !== 'RAPPORT'">{{ h.descriptionAction }}</p>
+            <div class="historique-rapport-contenu" *ngIf="h.typeAction === 'RAPPORT'">
+              <span class="material-icons">format_quote</span>
+              {{ h.descriptionAction }}
+            </div>
+            <div class="historique-changement" *ngIf="h.ancienneValeur || h.nouvelleValeur">
+              <span class="val-avant">{{ h.ancienneValeur }}</span>
+              <span class="material-icons">arrow_forward</span>
+              <span class="val-apres">{{ h.nouvelleValeur }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <ng-container *ngIf="!tacheSelectionneeEstReassignee">
+        <button class="btn-commencer-modal"
+          *ngIf="tacheSelectionnee?.statut === 'EN_ATTENTE'"
+          (click)="commencerTache(tacheSelectionnee?.idTache)">
+          <span class="material-icons">play_arrow</span> Commencer la tâche
+        </button>
+        <button class="btn-entest-modal"
+          *ngIf="tacheSelectionnee?.statut === 'EN_COURS'"
+          (click)="mettreEnTest(tacheSelectionnee?.idTache)">
+          <span class="material-icons">science</span> Mettre en test
+        </button>
+        <button class="btn-terminer-modal"
+          *ngIf="tacheSelectionnee?.statut === 'EN_TEST'"
+          (click)="terminerTache(tacheSelectionnee?.idTache)">
+          <span class="material-icons">check</span> Marquer comme terminée
+        </button>
+      </ng-container>
+      <button class="btn-fermer" (click)="fermerModal()">Fermer</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- VISIONNEUSE -->
+<div class="image-overlay" *ngIf="imageEnPleinEcran" (click)="fermerImagePleinEcran()">
+  <img [src]="imageEnPleinEcran" alt="Plein écran" />
+  <button class="btn-fermer-image" (click)="$event.stopPropagation(); fermerImagePleinEcran()">
+    <span class="material-icons">close</span>
+  </button>
+</div>

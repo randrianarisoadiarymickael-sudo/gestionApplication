@@ -1,0 +1,262 @@
+<div class="ticket-container">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="assets/logo_cnaps.png" alt="CNaPS" class="navbar-logo" />
+      <div class="navbar-info">
+        <span class="navbar-title">CNaPS — Gestion des Applications</span>
+        <span class="navbar-subtitle">Déclaration d'incident</span>
+      </div>
+    </div>
+    <div class="navbar-right">
+      <div class="user-info">
+        <div class="user-avatar">{{ user?.nom?.charAt(0) }}{{ user?.prenom?.charAt(0) }}</div>
+        <div class="user-details">
+          <span class="user-name">{{ user?.nom }} {{ user?.prenom }}</span>
+          <span class="user-role">{{ user?.role }}</span>
+        </div>
+      </div>
+      <button class="btn-retour" (click)="annuler()">Retour</button>
+    </div>
+  </nav>
+
+  <!-- CONTENU -->
+  <div class="ticket-content">
+
+    <!-- ONGLETS -->
+    <div class="onglets">
+      <button class="onglet" [class.actif]="ongletActif === 'nouveau'" (click)="ongletActif = 'nouveau'">
+        Créer Nouveau
+      </button>
+      <button class="onglet" [class.actif]="ongletActif === 'mesdemandes'" (click)="basculerMesDemandes()">
+        Mes Demandes
+      </button>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="succes" *ngIf="succes">✅ {{ succes }}</div>
+    <div class="erreur-msg" *ngIf="erreur"> {{ erreur }}</div>
+
+    <!-- ===== ONGLET CRÉER NOUVEAU ===== -->
+    <div *ngIf="ongletActif === 'nouveau'" class="ticket-card">
+
+      <div class="section-header">
+        <span class="section-title">DÉCLARATION D'INCIDENT APPLICATION</span>
+      </div>
+
+      <div class="grille-infos">
+
+        <div class="info-field">
+          <label>Matricule</label>
+          <input type="text" class="form-control readonly" [value]="user?.matricule" readonly />
+        </div>
+
+        <div class="info-field">
+          <label>Nom</label>
+          <input type="text" class="form-control readonly" [value]="user?.nom" readonly />
+        </div>
+
+        <div class="info-field">
+          <label>Prénom</label>
+          <input type="text" class="form-control readonly" [value]="user?.prenom" readonly />
+        </div>
+
+        <div class="info-field">
+          <label>Service</label>
+          <input type="text" class="form-control readonly" [value]="user?.departement?.nomDepartement || 'Non défini'" readonly />
+        </div>
+
+        <div class="info-field">
+          <label>Fonction</label>
+          <input type="text" class="form-control readonly" [value]="user?.role" readonly />
+        </div>
+
+        <div class="info-field">
+          <label>Date de déclaration</label>
+          <input type="text" class="form-control readonly" [value]="dateAujourdhui" readonly />
+        </div>
+
+      </div>
+
+      <div class="separateur"></div>
+      <div class="section-sous-titre">Informations sur l'incident</div>
+
+      <div class="grille-incident">
+
+        <!-- APPLICATION — RECHERCHE DYNAMIQUE -->
+        <div class="info-field">
+          <label>Application concernée <span class="required">*</span></label>
+          <div class="app-search-wrapper">
+
+            <div class="app-search-input-row">
+              <span class="material-icons app-search-icon">search</span>
+              <input
+                type="text"
+                class="form-control app-search-input"
+                placeholder="Rechercher une application..."
+                [value]="rechercheApplication"
+                (input)="onRechercheApplication($any($event.target).value)"
+                (focus)="ouvrirListeApp()"
+                autocomplete="off"
+              />
+              <button
+                *ngIf="rechercheApplication"
+                class="btn-effacer-app"
+                (click)="effacerApplication($event)"
+                type="button">
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+
+            <!-- Badge application sélectionnée -->
+            <div class="app-selectionnee" *ngIf="applicationSelectionnee">
+              <span class="material-icons app-check-icon">check_circle</span>
+              {{ applicationSelectionnee.nomApplication }}
+            </div>
+
+            <!-- Liste déroulante filtrée -->
+            <div class="app-dropdown" *ngIf="afficherListeApp">
+              <div *ngIf="applicationsFiltrees.length === 0" class="app-dropdown-vide">
+                Aucune application trouvée
+              </div>
+
+              <!-- Option Inconnue toujours visible en premier -->
+              <div class="app-dropdown-item app-dropdown-inconnue"
+                (mousedown)="selectionnerApplication({idApplication: getIdInconnue(), nomApplication: 'Inconnue'})">
+                <span class="material-icons app-item-icon">help_outline</span>
+                Inconnue — application non répertoriée
+              </div>
+
+              <div
+                *ngFor="let app of applicationsFiltrees"
+                class="app-dropdown-item"
+                (mousedown)="selectionnerApplication(app)">
+                <span class="material-icons app-item-icon">apps</span>
+                {{ app.nomApplication }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-field">
+          <label>Niveau de priorité <span class="required">*</span></label>
+          <select [(ngModel)]="ticket.priorite" class="form-control">
+            <option value="BASSE">Basse — Problème mineur</option>
+            <option value="MOYENNE">Moyenne — Affecte partiellement</option>
+            <option value="HAUTE">Haute — Bloque partiellement</option>
+            <option value="CRITIQUE">Critique — Système bloqué</option>
+          </select>
+        </div>
+
+        <div class="info-field full-width">
+          <label>Titre de l'incident <span class="required">*</span></label>
+          <input
+            type="text"
+            [(ngModel)]="ticket.titre"
+            placeholder="Décrivez brièvement le problème rencontré"
+            class="form-control"
+          />
+        </div>
+
+        <div class="info-field full-width">
+          <label>Description détaillée <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="ticket.description"
+            placeholder="Décrivez le problème en détail : quand cela s'est produit, les étapes pour reproduire, l'impact..."
+            class="form-control textarea-large"
+            rows="5">
+          </textarea>
+        </div>
+
+        <!-- CAPTURE D'ECRAN -->
+        <div class="info-field full-width">
+          <label>
+            Capture d'écran
+            <span class="optional-label">— Optionnel</span>
+          </label>
+          <div class="upload-zone"
+            [class.has-image]="imagePreview"
+            (click)="fileInput.click()"
+            (dragover)="$event.preventDefault()"
+            (drop)="onDrop($event)">
+
+            <input #fileInput type="file" accept="image/*"
+              style="display:none"
+              (change)="onFileSelected($event)" />
+
+            <div class="upload-placeholder" *ngIf="!imagePreview">
+              <span class="material-icons upload-icon">add_photo_alternate</span>
+              <p class="upload-text">Cliquez ou glissez une image ici</p>
+              <p class="upload-hint">PNG, JPG, GIF — Max 5 Mo</p>
+            </div>
+
+            <div class="upload-preview" *ngIf="imagePreview">
+              <img [src]="imagePreview" alt="Aperçu" class="preview-img" />
+              <button class="btn-remove-image" (click)="supprimerImage($event)">
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-annuler" (click)="annuler()">Annuler</button>
+        <button class="btn-creer" (click)="creerTicket()" [disabled]="chargement">
+          <span class="spinner-btn" *ngIf="chargement"></span>
+          {{ chargement ? 'Envoi en cours...' : 'Soumettre la déclaration' }}
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ===== ONGLET MES DEMANDES ===== -->
+    <div *ngIf="ongletActif === 'mesdemandes'" class="ticket-card">
+
+      <div class="section-header">
+        <span class="section-title">≡ MES DEMANDES</span>
+      </div>
+
+      <div class="chargement-msg" *ngIf="chargementDemandes">
+        Chargement de vos demandes...
+      </div>
+
+      <div class="aucune-demande" *ngIf="!chargementDemandes && mesDemandes.length === 0">
+        <div class="aucune-icone"></div>
+        <p>Vous n'avez aucune demande pour le moment.</p>
+      </div>
+
+      <div class="demandes-liste" *ngIf="!chargementDemandes && mesDemandes.length > 0">
+        <table class="table-demandes">
+          <thead>
+            <tr>
+              <th>N° Ticket</th>
+              <th>Application</th>
+              <th>Titre</th>
+              <th>Date de création</th>
+              <th>État</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of mesDemandes" [ngClass]="getRowClass(t.statut)">
+              <td class="td-id">#{{ t.idTicket }}</td>
+              <td>{{ t.application?.nomApplication }}</td>
+              <td>{{ t.titre }}</td>
+              <td>{{ t.dateCreation | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <span class="badge-statut" [ngClass]="getStatutClass(t.statut)">
+                  {{ getStatutLabel(t.statut) }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </div>
+</div>

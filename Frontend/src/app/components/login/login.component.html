@@ -1,0 +1,45 @@
+<div class="login-container">
+  <div class="login-card">
+
+    <div class="login-header">
+      <h1>CNaPS</h1>
+      <h2>Gestion des Applications</h2>
+      <p>Connectez-vous avec votre matricule</p>
+    </div>
+
+    <div class="login-form">
+
+      <div class="form-group">
+        <label>Numéro Matricule</label>
+        <input
+          type="text"
+          [(ngModel)]="matricule"
+          placeholder="Ex: ADMIN001"
+          class="form-control"
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <input
+          type="password"
+          [(ngModel)]="motDePasse"
+          placeholder="Votre mot de passe"
+          class="form-control"
+        />
+      </div>
+
+      <div class="erreur" *ngIf="erreur">
+        {{ erreur }}
+      </div>
+
+      <button
+        class="btn-login"
+        (click)="login()"
+        [disabled]="chargement">
+        {{ chargement ? 'Connexion...' : 'Se connecter' }}
+      </button>
+
+    </div>
+  </div>
+</div>

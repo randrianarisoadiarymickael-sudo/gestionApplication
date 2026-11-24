@@ -1,0 +1,217 @@
+<div class="detail-container">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="assets/logo-cnaps.png" alt="CNaPS" class="navbar-logo" />
+      <div class="navbar-info">
+        <span class="navbar-title">CNaPS — Gestion des Applications</span>
+        <span class="navbar-subtitle">Détail du ticket</span>
+      </div>
+    </div>
+    <div class="navbar-right">
+      <div class="user-info">
+        <div class="user-avatar">
+          {{ user?.nom?.charAt(0) }}{{ user?.prenom?.charAt(0) }}
+        </div>
+        <div class="user-details">
+          <span class="user-name">{{ user?.nom }} {{ user?.prenom }}</span>
+          <span class="user-role">{{ user?.role }}</span>
+        </div>
+      </div>
+      <button class="btn-retour" (click)="retour()">
+        <span class="material-icons">arrow_back</span>
+        Retour
+      </button>
+    </div>
+  </nav>
+
+  <!-- CHARGEMENT -->
+  <div class="chargement" *ngIf="chargement">
+    <div class="spinner"></div>
+    <p>Chargement du ticket...</p>
+  </div>
+
+  <!-- CONTENU -->
+  <div class="detail-content" *ngIf="!chargement && ticket">
+
+    <!-- MESSAGES -->
+    <div class="succes" *ngIf="succes">
+      <span class="material-icons">check_circle</span>
+      {{ succes }}
+    </div>
+    <div class="erreur" *ngIf="erreur">
+      <span class="material-icons">error_outline</span>
+      {{ erreur }}
+    </div>
+
+    <!-- HEADER TICKET -->
+    <div class="ticket-header-card">
+      <div class="ticket-header-left">
+        <div class="ticket-id-badge">Ticket #{{ ticket.idTicket }}</div>
+        <h1>{{ ticket.titre }}</h1>
+        <div class="ticket-meta">
+          <span>
+            <span class="material-icons">apps</span>
+            {{ ticket.application?.nomApplication }}
+          </span>
+          <span>
+            <span class="material-icons">person</span>
+            {{ ticket.createur?.nom }} {{ ticket.createur?.prenom }}
+          </span>
+          <span>
+            <span class="material-icons">calendar_today</span>
+            {{ ticket.dateCreation | date:'dd/MM/yyyy' }}
+          </span>
+        </div>
+      </div>
+      <div class="ticket-header-right">
+        <span class="badge" [ngClass]="getPrioriteClass(ticket.priorite)">
+          {{ ticket.priorite }}
+        </span>
+        <span class="statut" [ngClass]="getStatutClass(ticket.statut)">
+          {{ ticket.statut }}
+        </span>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+
+      <!-- COLONNE GAUCHE -->
+      <div class="col-gauche">
+
+        <!-- DESCRIPTION -->
+        <div class="section-card">
+          <div class="section-titre">
+            <span class="material-icons">description</span>
+            Description du problème
+          </div>
+          <p class="description-text">{{ ticket.description }}</p>
+        </div>
+
+        <!-- CHANGER STATUT -->
+        <div class="section-card">
+          <div class="section-titre">
+            <span class="material-icons">swap_horiz</span>
+            Changer le statut
+          </div>
+          <div class="statuts-group">
+            <button
+              *ngFor="let statut of statuts"
+              class="statut-btn"
+              [class.active]="ticket.statut === statut"
+              [ngClass]="getStatutClass(statut)"
+              (click)="changerStatut(statut)">
+              {{ statut }}
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLONNE DROITE -->
+      <div class="col-droite">
+
+        <!-- TACHES -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-titre">
+              <span class="material-icons">task_alt</span>
+              Tâches ({{ taches.length }})
+            </div>
+            <button class="btn-ajouter" (click)="afficherFormTache = !afficherFormTache">
+              <span class="material-icons">{{ afficherFormTache ? 'close' : 'add' }}</span>
+              {{ afficherFormTache ? 'Annuler' : 'Ajouter' }}
+            </button>
+          </div>
+
+          <!-- FORMULAIRE NOUVELLE TACHE -->
+          <div class="form-tache" *ngIf="afficherFormTache">
+            <div class="form-group">
+              <label>Titre <span class="required">*</span></label>
+              <input
+                type="text"
+                [(ngModel)]="nouvelleTache.titre"
+                placeholder="Titre de la tâche"
+                class="form-control"
+              />
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea
+                [(ngModel)]="nouvelleTache.description"
+                placeholder="Description de la tâche..."
+                class="form-control"
+                rows="3">
+              </textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Priorité</label>
+                <select [(ngModel)]="nouvelleTache.priorite" class="form-control">
+                  <option value="BASSE">Basse</option>
+                  <option value="MOYENNE">Moyenne</option>
+                  <option value="HAUTE">Haute</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Assigner à</label>
+                <select [(ngModel)]="nouvelleTache.developpeur.idUtilisateur" class="form-control">
+                  <option value="">-- Choisir un développeur --</option>
+                  <option *ngFor="let dev of developpeurs" [value]="dev.idUtilisateur">
+                    {{ dev.nom }} {{ dev.prenom }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            <button class="btn-creer-tache" (click)="creerTache()">
+              <span class="material-icons">save</span>
+              Enregistrer la tâche
+            </button>
+          </div>
+
+          <!-- LISTE TACHES -->
+          <div class="taches-list">
+            <div *ngFor="let tache of taches" class="tache-item">
+              <div class="tache-left">
+                <span class="tache-titre">{{ tache.titre }}</span>
+                <span class="tache-dev" *ngIf="tache.developpeur">
+                  <span class="material-icons">person</span>
+                  {{ tache.developpeur?.nom }} {{ tache.developpeur?.prenom }}
+                </span>
+                <span class="tache-dev" *ngIf="!tache.developpeur">
+                  <span class="material-icons">person_off</span>
+                  Non assignée
+                </span>
+              </div>
+              <div class="tache-right">
+                <span class="badge" [ngClass]="getPrioriteClass(tache.priorite)">
+                  {{ tache.priorite }}
+                </span>
+                <span class="statut" [ngClass]="getStatutClass(tache.statut)">
+                  {{ tache.statut }}
+                </span>
+                <button
+                  class="btn-terminer"
+                  *ngIf="tache.statut !== 'TERMINEE'"
+                  (click)="terminerTache(tache.idTache)">
+                  <span class="material-icons">check</span>
+                  Terminer
+                </button>
+              </div>
+            </div>
+            <div class="no-data" *ngIf="taches.length === 0">
+              <span class="material-icons">inbox</span>
+              <p>Aucune tâche pour ce ticket</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

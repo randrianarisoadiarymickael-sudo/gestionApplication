@@ -1,0 +1,135 @@
+<div class="historique-container">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="assets/logo_cnaps.png" alt="CNaPS" class="navbar-logo" />
+      <div class="navbar-info">
+        <span class="navbar-title">CNaPS — Gestion des Applications</span>
+        <span class="navbar-subtitle">Historique du ticket</span>
+      </div>
+    </div>
+    <div class="navbar-right">
+      <div class="user-info">
+        <div class="user-avatar">
+          {{ user?.nom?.charAt(0) }}{{ user?.prenom?.charAt(0) }}
+        </div>
+        <div class="user-details">
+          <span class="user-name">{{ user?.nom }} {{ user?.prenom }}</span>
+          <span class="user-role">{{ user?.role }}</span>
+        </div>
+      </div>
+      <button class="btn-retour" (click)="retour()">
+        Retour
+      </button>
+    </div>
+  </nav>
+
+  <!-- CONTENU -->
+  <div class="historique-content">
+
+    <!-- CHARGEMENT -->
+    <div class="chargement" *ngIf="chargement">
+      <div class="spinner"></div>
+      <p>Chargement de l'historique...</p>
+    </div>
+
+    <!-- ERREUR -->
+    <div class="erreur" *ngIf="erreur">{{ erreur }}</div>
+
+    <div *ngIf="!chargement">
+
+      <!-- HEADER TICKET -->
+      <div class="ticket-header-card" *ngIf="ticket">
+        <div class="ticket-header-left">
+          <span class="ticket-id-badge">Ticket #{{ ticket.idTicket }}</span>
+          <h1>{{ ticket.titre }}</h1>
+          <div class="ticket-meta">
+            <span>{{ ticket.application?.nomApplication }}</span>
+            <span>{{ ticket.createur?.nom }} {{ ticket.createur?.prenom }}</span>
+          </div>
+        </div>
+        <div class="ticket-header-right">
+          <span class="statut statut-{{ ticket.statut?.toLowerCase() }}">
+            {{ ticket.statut }}
+          </span>
+        </div>
+      </div>
+
+      <!-- PAGE HEADER -->
+      <div class="page-header">
+        <h2>Historique des actions</h2>
+        <span class="historique-count">{{ historiques.length }} action(s)</span>
+      </div>
+
+      <!-- TIMELINE -->
+      <div class="timeline" *ngIf="historiques.length > 0">
+        <div *ngFor="let h of historiques" class="timeline-item">
+
+          <div class="timeline-icon" [ngClass]="getTypeActionClass(h.typeAction)">
+            {{ h.typeAction?.charAt(0) }}
+          </div>
+
+          <div class="timeline-card"
+               [class.timeline-card-rapport]="h.typeAction === 'RAPPORT'">
+
+            <div class="timeline-card-header">
+              <div class="timeline-card-left">
+                <span class="timeline-type" [ngClass]="getTypeActionClass(h.typeAction)">
+                  {{ h.typeAction }}
+                </span>
+                <!-- ── CORRIGÉ : utilise les champs DTO ── -->
+                <span class="timeline-user" *ngIf="h.utilisateurNom">
+                  par {{ h.utilisateurNom }} {{ h.utilisateurPrenom }}
+                </span>
+              </div>
+              <span class="timeline-date">
+                {{ h.dateAction | date:'dd/MM/yyyy HH:mm' }}
+              </span>
+            </div>
+
+            <!-- Description normale (tous les types sauf RAPPORT) -->
+            <p class="timeline-description"
+               *ngIf="h.typeAction !== 'RAPPORT'">
+              {{ h.descriptionAction }}
+            </p>
+
+            <!-- BLOC RAPPORT -->
+            <div class="rapport-bloc" *ngIf="h.typeAction === 'RAPPORT'">
+              <div class="rapport-bloc-entete">
+                <span class="material-icons">edit_note</span>
+                Rapport du développeur
+              </div>
+              <p class="rapport-bloc-contenu">{{ h.descriptionAction }}</p>
+            </div>
+
+            <div class="timeline-changement"
+                 *ngIf="h.ancienneValeur || h.nouvelleValeur">
+              <div class="changement-item" *ngIf="h.ancienneValeur">
+                <span class="changement-label">Avant :</span>
+                <span class="changement-valeur valeur-avant">{{ h.ancienneValeur }}</span>
+              </div>
+              <span class="changement-arrow">→</span>
+              <div class="changement-item" *ngIf="h.nouvelleValeur">
+                <span class="changement-label">Après :</span>
+                <span class="changement-valeur valeur-apres">{{ h.nouvelleValeur }}</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- AUCUN HISTORIQUE -->
+      <div class="no-data" *ngIf="historiques.length === 0">
+        <div class="no-data-content">
+          <p>Aucune action enregistrée pour ce ticket</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
